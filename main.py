@@ -79,7 +79,7 @@ def scan(intf):
 
         while True:
             read_csv()
-            print(f"\r{Fore.BLUE}[*]{Fore.RESET} Scanning accesspoints... found {len(active_wireless_networks)} {Fore.YELLOW}Ctrl+C{Fore.RESET} to stop", end='', flush=True)
+            print(f"\r{Fore.BLUE}[*]{Fore.RESET} Scanning accesspoints... found {len(active_wireless_networks)}. {Fore.YELLOW}Ctrl+C{Fore.RESET} to stop", end='', flush=True)
             time.sleep(1)
 
     except KeyboardInterrupt:
